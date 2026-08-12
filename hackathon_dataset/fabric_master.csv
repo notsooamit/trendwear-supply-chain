@@ -1,0 +1,31 @@
+fabric_id,fabric_name,unit_of_measure,standard_lead_time_days,standard_cost_per_meter
+FAB_001,Linen Type-1,Meters,24,10.2
+FAB_002,Wool Blend Type-2,Meters,28,13.43
+FAB_003,Cotton Type-3,Meters,28,15.42
+FAB_004,Silk Type-4,Meters,39,7.38
+FAB_005,Linen Type-5,Meters,34,6.58
+FAB_006,Rayon Type-6,Meters,39,16.33
+FAB_007,Rayon Type-7,Meters,23,7.34
+FAB_008,Linen Type-8,Meters,30,14.33
+FAB_009,Nylon Type-9,Meters,39,8.75
+FAB_010,Denim Type-10,Meters,45,4.82
+FAB_011,Cotton Type-11,Meters,21,5.72
+FAB_012,Denim Type-12,Meters,41,12.15
+FAB_013,Nylon Type-13,Meters,38,12.14
+FAB_014,Rayon Type-14,Meters,30,17.58
+FAB_015,Cotton Type-15,Meters,21,13.38
+FAB_016,Wool Blend Type-16,Meters,35,5.12
+FAB_017,Nylon Type-17,Meters,24,10.08
+FAB_018,Wool Blend Type-18,Meters,25,10.86
+FAB_019,Polyester Type-19,Meters,33,15.7
+FAB_020,Linen Type-20,Meters,23,8.92
+FAB_021,Denim Type-21,Meters,14,12.18
+FAB_022,Rayon Type-22,Meters,15,5.12
+FAB_023,Silk Type-23,Meters,33,6.97
+FAB_024,Linen Type-24,Meters,19,4.74
+FAB_025,Rayon Type-25,Meters,18,17.68
+FAB_026,Denim Type-26,Meters,22,13.07
+FAB_027,Denim Type-27,Meters,30,11.15
+FAB_028,Nylon Type-28,Meters,27,16.97
+FAB_029,Linen Type-29,Meters,33,9.29
+FAB_030,Silk Type-30,Meters,42,16.54

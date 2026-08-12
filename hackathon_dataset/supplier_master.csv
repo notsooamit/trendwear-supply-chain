@@ -1,0 +1,26 @@
+supplier_id,supplier_name,location,tier_rating,base_risk_factor
+SUP_001,Apex Textiles,Coimbatore,Tier 1,0.06
+SUP_002,Vanguard Fabrics,Surat,Tier 1,0.12
+SUP_003,Omni Thread Works,Coimbatore,Tier 1,0.25
+SUP_004,Titan Weavers,Ahmedabad,Tier 1,0.23
+SUP_005,Elysian Mills,Bangalore,Tier 1,0.08
+SUP_006,Nordic Fiber Co,Tirupur,Tier 3,0.23
+SUP_007,SilkRoad Logistics,Ahmedabad,Tier 1,0.26
+SUP_008,Atlas Yarn Corp,Coimbatore,Tier 3,0.18
+SUP_009,Zenith Weaving,Ludhiana,Tier 3,0.13
+SUP_010,Pinnacle Yarns,Bangalore,Tier 1,0.26
+SUP_011,Quantum Mills,Surat,Tier 2,0.1
+SUP_012,Horizon Textiles,Surat,Tier 1,0.08
+SUP_013,Apex Materials,Bangalore,Tier 2,0.3
+SUP_014,Bayfront Weavers,Ahmedabad,Tier 2,0.29
+SUP_015,Crestline Yarns,Coimbatore,Tier 2,0.21
+SUP_016,Delta Fabrics,Ludhiana,Tier 1,0.22
+SUP_017,EcoFiber Solutions,Coimbatore,Tier 3,0.32
+SUP_018,Frontier Textiles,Surat,Tier 3,0.11
+SUP_019,Global Weave,Bangalore,Tier 1,0.25
+SUP_020,Heritage Yarns,Surat,Tier 1,0.31
+SUP_021,Imperial Fabrics,Bangalore,Tier 2,0.13
+SUP_022,Jubilee Thread,Coimbatore,Tier 2,0.1
+SUP_023,Kestrel Textiles,Surat,Tier 1,0.25
+SUP_024,Lumina Fibers,Coimbatore,Tier 3,0.24
+SUP_025,Matrix Weavers,Ahmedabad,Tier 3,0.1
