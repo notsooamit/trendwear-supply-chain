@@ -13,7 +13,7 @@ The TrendWear platform addresses two core operational problems faced by multi-re
    - Executes Material Requirements Planning (MRP) explosions across Bill of Materials (BOM) structures.
    - Evaluates inventory sell-through velocity to recommend markdown schedules and prevent inventory obsolescence.
 
-2. **Problem Statement 2: Procurement Optimization & Risk Prediction (PR1)**
+2. **Problem Statement 2: Procurement Optimization and Risk Prediction (PR1)**
    - Formulates Mixed-Integer Linear Programming (MILP) models using PuLP to allocate fabric demand across candidate suppliers.
    - Minimizes total landed costs while enforcing Minimum Order Quantities (MOQs), supplier capacity bounds, and contract risk penalties.
    - Deploys supervised Machine Learning algorithms (XGBoost Regressor and Random Forest Classifier) to predict purchase order delivery delays and classify supplier risk profiles before order emission.
@@ -54,25 +54,33 @@ The TrendWear platform addresses two core operational problems faced by multi-re
 ## 3. Core Mathematical Formulations and Logic
 
 ### 3.1 Material Requirements Planning (MRP) Explosion
-Given a set of SKUs $k \in K$, fabrics $f \in F$, and planning period $t$:
+Given a set of SKUs `k`, fabrics `f`, and planning period `t`:
 
-$$R_{f,t} = \sum_{k \in K} \left( D_{k,t} \times \text{BOM}_{k,f} \right)$$
+```
+RequiredMeters(f, t) = Sum over k of [ Demand(k, t) * BOM(k, f) ]
+```
 
-Where $D_{k,t}$ represents total forecasted demand units for SKU $k$ in period $t$, and $\text{BOM}_{k,f}$ is the fabric meters required per SKU unit.
+Where `Demand(k, t)` represents total forecasted demand units for SKU `k` in period `t`, and `BOM(k, f)` is the fabric meters required per SKU unit.
 
 ### 3.2 Mixed-Integer Linear Programming Procurement Model (PuLP)
 Minimize total landed cost, weighted risk penalties, lead time penalties, and unfulfilled demand penalties:
 
-$$\min \sum_{s \in S} \sum_{f \in F} \left( w_{\text{cost}} \cdot P_{s,f} \cdot x_{s,f} + w_{\text{risk}} \cdot \text{Risk}_s \cdot P_{s,f} \cdot x_{s,f} + w_{\text{lt}} \cdot \text{LT}_{s,f} \cdot P_{s,f} \cdot x_{s,f} \right) + \sum_{f \in F} (M \cdot z_f)$$
+```
+Minimize TotalCost = 
+    Sum_{s, f} [ w_cost * Price(s, f) * x(s, f) ]
+  + Sum_{s, f} [ w_risk * RiskScore(s) * Price(s, f) * x(s, f) ]
+  + Sum_{s, f} [ w_lt * LeadTime(s, f) * Price(s, f) * x(s, f) ]
+  + Sum_{f}    [ BigM * z(f) ]
+```
 
 **Subject to:**
-1. **Demand Satisfaction:** $\sum_{s \in S_f} x_{s,f} + z_f = R_{f,t} \quad \forall f \in F$
-2. **Capacity Bounds:** $x_{s,f} \le \text{Capacity}_{s,f} \cdot y_{s,f} \quad \forall s, f$
-3. **Minimum Order Quantities:** $x_{s,f} \ge \text{MOQ}_{s,f} \cdot y_{s,f} \quad \forall s, f$
-4. **Contract Minimum Allocation:** $x_{s,f} \ge \text{MinAlloc}_{s,f} \cdot R_{f,t} \cdot y_{s,f} \quad \forall s, f$
-5. **Contract Maximum Allocation:** $x_{s,f} \le \text{MaxAlloc}_{s,f} \cdot R_{f,t} \quad \forall s, f$
+1. **Demand Satisfaction:** `Sum_s [ x(s, f) ] + z(f) = RequiredMeters(f, t)` for all fabrics `f`.
+2. **Capacity Bounds:** `x(s, f) <= Capacity(s, f) * y(s, f)` for all `s, f`.
+3. **Minimum Order Quantities:** `x(s, f) >= MOQ(s, f) * y(s, f)` for all `s, f`.
+4. **Contract Minimum Allocation:** `x(s, f) >= MinAllocPct(s, f) * RequiredMeters(f, t) * y(s, f)` for all `s, f`.
+5. **Contract Maximum Allocation:** `x(s, f) <= MaxAllocPct(s, f) * RequiredMeters(f, t)` for all `s, f`.
 
-Where $x_{s,f} \ge 0$ is the continuous volume allocation variable, $y_{s,f} \in \{0, 1\}$ is the binary contract activation variable, and $z_f \ge 0$ is the shortfall variable penalized by Big-M coefficient $M = 10,000$.
+Where `x(s, f) >= 0` is the continuous volume allocation variable, `y(s, f) in {0, 1}` is the binary contract activation variable, and `z(f) >= 0` is the shortfall variable penalized by Big-M coefficient `BigM = 10,000`.
 
 ### 3.3 Supervised Machine Learning Pipelines
 - **Delay Regressor (XGBoost):** Predicts continuous delivery delay in days using order quantity, lead time, historical supplier OTD %, quality pass rate, defect PPM, and risk interaction terms.
