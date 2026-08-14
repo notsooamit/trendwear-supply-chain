@@ -3,6 +3,9 @@ import streamlit as st
 import os
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "hackathon_dataset")
+SHARED_DIR = os.path.join(DATA_DIR, "shared")
+PR1_DIR = os.path.join(DATA_DIR, "pr1_procurement")
+P2_DIR = os.path.join(DATA_DIR, "p2_sop")
 
 
 @st.cache_data
@@ -11,26 +14,28 @@ def load_all_data():
     data = {}
 
     files = {
-        "suppliers": "supplier_master.csv",
-        "fabrics": "fabric_master.csv",
-        "skus": "sku_master.csv",
-        "plants": "plant_master.csv",
-        "bom": "bom_material.csv",
-        "inventory": "current_inventory.csv",
-        "contracts": "supplier_material_contracts.csv",
-        "fabric_constraints": "fabric_constraints.csv",
-        "demand_forecast": "seasonal_sku_demand.csv",
-        "sell_through": "historical_sell_through.csv",
-        "markdowns": "historical_markdowns.csv",
-        "logistics": "dc_to_store_logistics.csv",
-        "plant_capacity": "plant_production_capacity.csv",
-        "material_demand": "material_demand_forecast.csv",
-        "supplier_perf": "supplier_performance_history.csv",
-        "purchase_orders": "historical_purchase_orders.csv",
+        # Shared master tables
+        "suppliers": os.path.join(SHARED_DIR, "supplier_master.csv"),
+        "fabrics": os.path.join(SHARED_DIR, "fabric_master.csv"),
+        "skus": os.path.join(SHARED_DIR, "sku_master.csv"),
+        "plants": os.path.join(SHARED_DIR, "plant_master.csv"),
+        "bom": os.path.join(SHARED_DIR, "bom_material.csv"),
+        # PR1 - Procurement
+        "contracts": os.path.join(PR1_DIR, "supplier_material_contracts.csv"),
+        "material_demand": os.path.join(PR1_DIR, "material_demand_forecast.csv"),
+        "supplier_perf": os.path.join(PR1_DIR, "supplier_performance_history.csv"),
+        "purchase_orders": os.path.join(PR1_DIR, "historical_purchase_orders.csv"),
+        # P2 - S&OP Planning
+        "demand_forecast": os.path.join(P2_DIR, "seasonal_sku_demand.csv"),
+        "inventory": os.path.join(P2_DIR, "current_inventory.csv"),
+        "fabric_constraints": os.path.join(P2_DIR, "fabric_constraints.csv"),
+        "plant_capacity": os.path.join(P2_DIR, "plant_production_capacity.csv"),
+        "sell_through": os.path.join(P2_DIR, "historical_sell_through.csv"),
+        "markdowns": os.path.join(P2_DIR, "historical_markdowns.csv"),
+        "logistics": os.path.join(P2_DIR, "dc_to_store_logistics.csv"),
     }
 
-    for key, filename in files.items():
-        filepath = os.path.join(DATA_DIR, filename)
+    for key, filepath in files.items():
         data[key] = pd.read_csv(filepath)
 
     # Parse date columns

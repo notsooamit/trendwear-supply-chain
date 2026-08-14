@@ -8,7 +8,12 @@ np.random.seed(42)
 random.seed(42)
 
 OUTPUT_DIR = "./hackathon_dataset"
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+SHARED_DIR = f"{OUTPUT_DIR}/shared"
+PR1_DIR = f"{OUTPUT_DIR}/pr1_procurement"
+P2_DIR = f"{OUTPUT_DIR}/p2_sop"
+os.makedirs(SHARED_DIR, exist_ok=True)
+os.makedirs(PR1_DIR, exist_ok=True)
+os.makedirs(P2_DIR, exist_ok=True)
 
 print("Generating dataset...")
 
@@ -38,7 +43,7 @@ for i in range(1, 26):
         "base_risk_factor": round(random.uniform(0.05, 0.35), 2),
     })
 df_suppliers = pd.DataFrame(suppliers)
-df_suppliers.to_csv(f"{OUTPUT_DIR}/supplier_master.csv", index=False)
+df_suppliers.to_csv(f"{SHARED_DIR}/supplier_master.csv", index=False)
 
 # Fabric Master (30 rows)
 fabric_types = ["Cotton", "Polyester", "Denim", "Linen", "Wool Blend", "Silk", "Nylon", "Rayon"]
@@ -52,7 +57,7 @@ for i in range(1, 31):
         "standard_cost_per_meter": round(random.uniform(3.5, 18.0), 2),
     })
 df_fabrics = pd.DataFrame(fabrics)
-df_fabrics.to_csv(f"{OUTPUT_DIR}/fabric_master.csv", index=False)
+df_fabrics.to_csv(f"{SHARED_DIR}/fabric_master.csv", index=False)
 
 # SKU Master (50 rows)
 categories = ["Jackets", "Shirts", "Trousers", "Dresses", "Activewear", "Outerwear"]
@@ -75,7 +80,7 @@ for i in range(1, 51):
         "launch_date": (datetime(2026, 1, 1) + timedelta(days=random.randint(0, 180))).strftime("%Y-%m-%d"),
     })
 df_skus = pd.DataFrame(skus)
-df_skus.to_csv(f"{OUTPUT_DIR}/sku_master.csv", index=False)
+df_skus.to_csv(f"{SHARED_DIR}/sku_master.csv", index=False)
 
 # Plant Master (5 rows)
 plants = []
@@ -87,7 +92,7 @@ for i in range(1, 6):
         "weekly_capacity_units": random.randint(10000, 25000),
     })
 df_plants = pd.DataFrame(plants)
-df_plants.to_csv(f"{OUTPUT_DIR}/plant_master.csv", index=False)
+df_plants.to_csv(f"{SHARED_DIR}/plant_master.csv", index=False)
 
 
 # ==========================================
@@ -111,7 +116,7 @@ for sku in df_skus["sku_id"]:
         })
         bom_id += 1
 df_bom = pd.DataFrame(bom)
-df_bom.to_csv(f"{OUTPUT_DIR}/bom_material.csv", index=False)
+df_bom.to_csv(f"{SHARED_DIR}/bom_material.csv", index=False)
 
 # Current Inventory (500 rows) - Unique (sku, location) pairs
 plant_ids = [p["plant_id"] for p in plants]
@@ -139,7 +144,7 @@ for idx, (sku, loc) in enumerate(inv_pairs, 1):
         "safety_stock_threshold": random.randint(300, 800),
     })
 df_inventory = pd.DataFrame(inventory)
-df_inventory.to_csv(f"{OUTPUT_DIR}/current_inventory.csv", index=False)
+df_inventory.to_csv(f"{P2_DIR}/current_inventory.csv", index=False)
 
 # Supplier Material Contracts (~250 rows)
 # Each supplier handles 8-12 fabrics. Finish each supplier before checking limit.
@@ -165,7 +170,7 @@ for sup in df_suppliers["supplier_id"]:
         })
         contract_id += 1
 df_contracts = pd.DataFrame(contracts)
-df_contracts.to_csv(f"{OUTPUT_DIR}/supplier_material_contracts.csv", index=False)
+df_contracts.to_csv(f"{PR1_DIR}/supplier_material_contracts.csv", index=False)
 
 # Fabric Constraints (300 rows) - Unique (fabric, plant) pairs
 fc_pairs = set()
@@ -187,7 +192,7 @@ for idx, (fab, plant) in enumerate(fc_pairs, 1):
         "fabric_lead_time_weeks": random.randint(2, 6),
     })
 df_fabric_constraints = pd.DataFrame(fabric_constraints)
-df_fabric_constraints.to_csv(f"{OUTPUT_DIR}/fabric_constraints.csv", index=False)
+df_fabric_constraints.to_csv(f"{P2_DIR}/fabric_constraints.csv", index=False)
 
 
 # ==========================================
@@ -218,7 +223,7 @@ for idx, (sku, region, period) in enumerate(demand_combos, 1):
         "confidence_interval_pct": round(random.uniform(0.80, 0.95), 2),
     })
 df_demand_forecast = pd.DataFrame(demand_forecast)
-df_demand_forecast.to_csv(f"{OUTPUT_DIR}/seasonal_sku_demand.csv", index=False)
+df_demand_forecast.to_csv(f"{P2_DIR}/seasonal_sku_demand.csv", index=False)
 
 # Historical Sell-Through - Unique (sku, week) combos
 # 50 SKUs x 52 weeks = 2600 max unique combos
@@ -243,7 +248,7 @@ for idx, (sku, week) in enumerate(st_combos, 1):
         "sell_through_rate": round(sold / avail, 4),
     })
 df_sell_through = pd.DataFrame(sell_through)
-df_sell_through.to_csv(f"{OUTPUT_DIR}/historical_sell_through.csv", index=False)
+df_sell_through.to_csv(f"{P2_DIR}/historical_sell_through.csv", index=False)
 
 # Historical Markdowns (2000 rows)
 sku_price_map = df_skus.set_index("sku_id")["target_unit_price"].to_dict()
@@ -263,7 +268,7 @@ for i in range(1, 2001):
         "remaining_unallocated_stock": random.randint(100, 1500),
     })
 df_markdowns = pd.DataFrame(markdowns)
-df_markdowns.to_csv(f"{OUTPUT_DIR}/historical_markdowns.csv", index=False)
+df_markdowns.to_csv(f"{P2_DIR}/historical_markdowns.csv", index=False)
 
 # DC to Store Logistics (2000 rows)
 stores = [f"STORE_{i:04d}" for i in range(1, 101)]
@@ -278,7 +283,7 @@ for i in range(1, 2001):
         "expedited_cost_per_unit": round(random.uniform(5.00, 12.00), 2),
     })
 df_logistics = pd.DataFrame(logistics)
-df_logistics.to_csv(f"{OUTPUT_DIR}/dc_to_store_logistics.csv", index=False)
+df_logistics.to_csv(f"{P2_DIR}/dc_to_store_logistics.csv", index=False)
 
 # Plant Production Capacity (~500 rows)
 # Finish each plant's periods before checking limit
@@ -300,7 +305,7 @@ for plant in df_plants["plant_id"]:
         })
         pc_id += 1
 df_plant_capacity = pd.DataFrame(plant_capacity)
-df_plant_capacity.to_csv(f"{OUTPUT_DIR}/plant_production_capacity.csv", index=False)
+df_plant_capacity.to_csv(f"{P2_DIR}/plant_production_capacity.csv", index=False)
 
 
 # ==========================================
@@ -319,7 +324,7 @@ for i in range(1, 2001):
         "urgency_level": random.choice(["Normal", "High", "Critical"]),
     })
 df_material_demand = pd.DataFrame(material_demand)
-df_material_demand.to_csv(f"{OUTPUT_DIR}/material_demand_forecast.csv", index=False)
+df_material_demand.to_csv(f"{PR1_DIR}/material_demand_forecast.csv", index=False)
 
 # Supplier Performance History (2000 rows)
 supplier_perf = []
@@ -337,7 +342,7 @@ for i in range(1, 2001):
         "overall_risk_score": round(100 - (otd * 0.5 + quality * 0.5), 2),
     })
 df_supplier_perf = pd.DataFrame(supplier_perf)
-df_supplier_perf.to_csv(f"{OUTPUT_DIR}/supplier_performance_history.csv", index=False)
+df_supplier_perf.to_csv(f"{PR1_DIR}/supplier_performance_history.csv", index=False)
 
 # Historical Purchase Orders (8000 rows) - ML Training Data
 print("Generating 8000 Purchase Orders...")
@@ -394,7 +399,7 @@ for i in range(1, 8001):
     })
 
 df_pos = pd.DataFrame(pos)
-df_pos.to_csv(f"{OUTPUT_DIR}/historical_purchase_orders.csv", index=False)
+df_pos.to_csv(f"{PR1_DIR}/historical_purchase_orders.csv", index=False)
 
 # Validation
 print("\nValidation Summary:")
