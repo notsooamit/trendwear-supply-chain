@@ -20,14 +20,66 @@ st.markdown("""
         font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
     }
     
-    /* Sidebar Styling */
+    /* Sidebar Base Styling */
     [data-testid="stSidebar"] {
-        background-color: #1c2d42;
-        color: #ffffff;
+        background-color: #1c2d42 !important;
     }
     
-    [data-testid="stSidebar"] * {
+    [data-testid="stSidebar"] h1, 
+    [data-testid="stSidebar"] h2, 
+    [data-testid="stSidebar"] h3, 
+    [data-testid="stSidebar"] p, 
+    [data-testid="stSidebar"] label, 
+    [data-testid="stSidebar"] span {
+        color: #e1e6eb !important;
+    }
+    
+    /* Sidebar Navigation Items */
+    [data-testid="stSidebarNav"] a {
+        color: #c0cad5 !important;
+    }
+    
+    [data-testid="stSidebarNav"] a[aria-current="page"] {
+        background-color: #2b3e56 !important;
         color: #ffffff !important;
+        font-weight: 600 !important;
+        border-left: 4px solid #0a6ed1 !important;
+    }
+
+    /* Sidebar Buttons (Sign Out, etc.) */
+    [data-testid="stSidebar"] button {
+        background-color: #0a6ed1 !important;
+        color: #ffffff !important;
+        border: none !important;
+        font-weight: 600 !important;
+        border-radius: 4px !important;
+    }
+    
+    [data-testid="stSidebar"] button * {
+        color: #ffffff !important;
+    }
+    
+    [data-testid="stSidebar"] button:hover {
+        background-color: #0854a0 !important;
+        color: #ffffff !important;
+    }
+
+    /* Sidebar Selectbox & Text Input Fields */
+    [data-testid="stSidebar"] [data-baseweb="select"] > div {
+        background-color: #2b3e56 !important;
+        color: #ffffff !important;
+        border: 1px solid #415775 !important;
+        border-radius: 4px !important;
+    }
+    
+    [data-testid="stSidebar"] [data-baseweb="select"] * {
+        color: #ffffff !important;
+    }
+    
+    [data-testid="stSidebar"] input {
+        background-color: #2b3e56 !important;
+        color: #ffffff !important;
+        border: 1px solid #415775 !important;
     }
     
     /* Login Form styling */
