@@ -51,32 +51,38 @@ The TrendWear platform addresses two core operational problems faced by multi-re
 
 ---
 
-## 3. Core Mathematical Formulations and Logic
+## 3. Core Functional Logic and Operations
 
 ### 3.1 Material Requirements Planning (MRP) Explosion
-Given a set of SKUs $k$, fabrics $f$, and planning period $t$:
+For a given SKU k, fabric f, and period t:
 
-$$R_{f,t} = \sum_{k} \left( D_{k,t} \cdot \text{BOM}_{k,f} \right)$$
+> Required Fabric Meters (f, t) = Sum over all SKUs k of [ Demand(k, t) * BOM Consumption(k, f) ]
 
-Where $D_{k,t}$ represents total forecasted demand units for SKU $k$ in period $t$, and $\text{BOM}_{k,f}$ is the fabric meters required per SKU unit.
+Where Demand(k, t) represents total forecasted demand units for SKU k in period t, and BOM Consumption(k, f) is the fabric meters required per unit.
 
 ### 3.2 Mixed-Integer Linear Programming Procurement Model (PuLP)
 Minimize total landed cost, weighted risk penalties, lead time penalties, and unfulfilled demand penalties:
 
-$$\min \sum_{s} \sum_{f} \left( w_{\text{cost}} \cdot P_{s,f} \cdot x_{s,f} + w_{\text{risk}} \cdot \text{Risk}_s \cdot P_{s,f} \cdot x_{s,f} + w_{\text{lt}} \cdot \text{LT}_{s,f} \cdot P_{s,f} \cdot x_{s,f} \right) + \sum_{f} (M \cdot z_f)$$
+```
+Minimize Total Landed Cost =
+    Sum over all (supplier s, fabric f) of:
+      [ Cost Weight * Price(s, f) * Volume(s, f) ]
+    + [ Risk Weight * Supplier Risk Score(s) * Price(s, f) * Volume(s, f) ]
+    + [ Lead Time Weight * Lead Time Days(s, f) * Price(s, f) * Volume(s, f) ]
+    + Sum over all fabric f of:
+      [ Shortfall Penalty (10,000) * Shortfall Volume(f) ]
+```
 
 **Subject to:**
-1. **Demand Satisfaction:** $\sum_{s} x_{s,f} + z_f = R_{f,t} \quad \forall f$
-2. **Capacity Bounds:** $x_{s,f} \le \text{Capacity}_{s,f} \cdot y_{s,f} \quad \forall s, f$
-3. **Minimum Order Quantities:** $x_{s,f} \ge \text{MOQ}_{s,f} \cdot y_{s,f} \quad \forall s, f$
-4. **Contract Minimum Allocation:** $x_{s,f} \ge \text{MinAlloc}_{s,f} \cdot R_{f,t} \cdot y_{s,f} \quad \forall s, f$
-5. **Contract Maximum Allocation:** $x_{s,f} \le \text{MaxAlloc}_{s,f} \cdot R_{f,t} \quad \forall s, f$
-
-Where $x_{s,f} \ge 0$ is the continuous volume allocation variable, $y_{s,f} \in \{0, 1\}$ is the binary contract activation variable, and $z_f \ge 0$ is the shortfall variable penalized by Big-M coefficient $M = 10,000$.
+1. **Demand Satisfaction**: Total allocated meters across all suppliers plus shortfall equals total required meters for each fabric.
+2. **Supplier Monthly Capacity**: Allocated meters cannot exceed the maximum monthly capacity of supplier s for fabric f.
+3. **Minimum Order Quantity (MOQ)**: If a contract is activated, allocated meters must equal or exceed the contract MOQ.
+4. **Contract Minimum Allocation**: Allocated volume must meet or exceed the contractually agreed minimum allocation percentage of total demand.
+5. **Contract Maximum Allocation**: Allocated volume cannot exceed the contractually agreed maximum allocation percentage of total demand.
 
 ### 3.3 Supervised Machine Learning Pipelines
-- **Delay Regressor (XGBoost):** Predicts continuous delivery delay in days using order quantity, lead time, historical supplier OTD %, quality pass rate, defect PPM, and risk interaction terms.
-- **Risk Classifier (Random Forest):** Classifies purchase orders into Low, Medium, or High risk categories.
+- **Delay Regressor (XGBoost)**: Predicts continuous delivery delay in days using order quantity, lead time, historical supplier OTD %, quality pass rate, defect PPM, and risk interaction terms.
+- **Risk Classifier (Random Forest)**: Classifies purchase orders into Low, Medium, or High risk categories.
 
 ---
 
