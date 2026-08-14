@@ -202,6 +202,23 @@ df_fabric_constraints.to_csv(f"{P2_DIR}/fabric_constraints.csv", index=False)
 forecast_periods = [f"2026-M{m:02d}" for m in range(1, 13)] + [f"2027-M{m:02d}" for m in range(1, 13)]
 regions = ["North_America", "Europe", "Asia_Pacific", "Latin_America"]
 
+# Seasonal multipliers: SS SKUs peak in spring/summer, FW in fall/winter
+sku_season_map = {s["sku_id"]: s["season"] for s in skus}
+def get_seasonal_multiplier(season, month):
+    """Return a demand multiplier based on SKU season and calendar month."""
+    # month 1-12 regardless of year
+    m = int(month.split("-M")[1])
+    if season.startswith("SS"):  # Spring/Summer peaks in M03-M08
+        if 3 <= m <= 8:
+            return random.uniform(1.3, 1.8)
+        else:
+            return random.uniform(0.5, 0.8)
+    else:  # Fall/Winter peaks in M09-M02
+        if m >= 9 or m <= 2:
+            return random.uniform(1.3, 1.8)
+        else:
+            return random.uniform(0.5, 0.8)
+
 # Seasonal SKU Demand Forecast - Unique (sku, region, period) combos
 # 50 SKUs x 4 regions x 24 periods = 4800 max
 max_demand_combos = min(4000, len(all_sku_ids) * len(regions) * len(forecast_periods))
@@ -214,12 +231,16 @@ while len(demand_combos) < max_demand_combos:
 
 demand_forecast = []
 for idx, (sku, region, period) in enumerate(demand_combos, 1):
+    base_demand = random.randint(3000, 10000)
+    season = sku_season_map.get(sku, "SS26")
+    multiplier = get_seasonal_multiplier(season, period)
+    final_demand = int(base_demand * multiplier)
     demand_forecast.append({
         "forecast_id": f"FCT_{idx:06d}",
         "sku_id": sku,
         "region": region,
         "period": period,
-        "forecasted_demand_units": random.randint(1000, 15000),
+        "forecasted_demand_units": final_demand,
         "confidence_interval_pct": round(random.uniform(0.80, 0.95), 2),
     })
 df_demand_forecast = pd.DataFrame(demand_forecast)
@@ -256,14 +277,14 @@ markdowns = []
 for i in range(1, 2001):
     sku = random.choice(all_sku_ids)
     orig_price = sku_price_map[sku]
-    discount = random.choice([0.15, 0.25, 0.35, 0.50])
+    discount_pct = random.choice([15, 25, 35, 50])  # actual percentages
     markdowns.append({
         "markdown_id": f"MKD_{i:05d}",
         "sku_id": sku,
         "period": f"2026-W{random.randint(1, 52):02d}",
         "original_price": orig_price,
-        "discount_percentage": discount,
-        "discounted_price": round(orig_price * (1 - discount), 2),
+        "discount_percentage": discount_pct,
+        "discounted_price": round(orig_price * (1 - discount_pct / 100), 2),
         "units_sold_post_markdown": random.randint(300, 3000),
         "remaining_unallocated_stock": random.randint(100, 1500),
     })
@@ -327,18 +348,24 @@ df_material_demand = pd.DataFrame(material_demand)
 df_material_demand.to_csv(f"{PR1_DIR}/material_demand_forecast.csv", index=False)
 
 # Supplier Performance History (2000 rows)
+# Link performance to base_risk_factor for realistic signal
 supplier_perf = []
 for i in range(1, 2001):
     sup = random.choice(list(df_suppliers["supplier_id"]))
-    otd = round(random.uniform(75.0, 99.5), 2)
-    quality = round(random.uniform(85.0, 99.9), 2)
+    risk = sup_risk_map.get(sup, 0.15) if 'sup_risk_map' in dir() else df_suppliers.set_index('supplier_id')['base_risk_factor'].to_dict().get(sup, 0.15)
+    # Higher risk -> lower OTD and quality
+    otd_base = 97.0 - risk * 30  # low risk ~94-97, high risk ~85-88
+    quality_base = 98.0 - risk * 20  # low risk ~96-98, high risk ~91-93
+    otd = round(np.clip(np.random.normal(otd_base, 3.0), 70.0, 99.5), 2)
+    quality = round(np.clip(np.random.normal(quality_base, 2.5), 80.0, 99.9), 2)
+    defect = int(np.clip(np.random.normal(200 + risk * 2000, 200), 50, 2000))
     supplier_perf.append({
         "perf_id": f"PERF_{i:05d}",
         "supplier_id": sup,
         "evaluation_period": random.choice(forecast_periods),
         "otd_rating_pct": otd,
         "quality_pass_rate_pct": quality,
-        "defect_ppm": random.randint(50, 1200),
+        "defect_ppm": defect,
         "overall_risk_score": round(100 - (otd * 0.5 + quality * 0.5), 2),
     })
 df_supplier_perf = pd.DataFrame(supplier_perf)
@@ -359,10 +386,18 @@ for i in range(1, 8001):
     order_qty = random.randint(500, 20000)
     promised_days = contract["contracted_lead_time_days"]
 
-    # Delay simulation using negative binomial distribution
-    qty_strain = 1.0 + (order_qty / 20000) * 0.3
-    expected_delay = sup_risk * 15 * qty_strain
-    actual_delay = max(0, int(np.random.negative_binomial(n=2, p=2 / (2 + expected_delay))))
+    # Delay simulation: ~70% on-time overall
+    # Low risk suppliers (<0.12): ~85% on-time
+    # Medium risk (0.12-0.25): ~70% on-time
+    # High risk (>0.25): ~45% on-time
+    qty_strain = 1.0 + (order_qty / 20000) * 0.2
+    on_time_prob = max(0.3, 1.0 - sup_risk * 2.0 * qty_strain)
+    if random.random() < on_time_prob:
+        actual_delay = 0
+    else:
+        # Delayed: severity scales with risk
+        expected_delay = sup_risk * 20 * qty_strain
+        actual_delay = max(1, int(np.random.negative_binomial(n=2, p=2 / (2 + expected_delay))))
 
     actual_days = promised_days + actual_delay
     otd_flag = 1 if actual_delay <= 0 else 0
