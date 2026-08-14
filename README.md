@@ -1,294 +1,175 @@
 # TrendWear Supply Chain Intelligence Platform
 
-An integrated solution for procurement optimization and S&OP planning built for TrendWear, a fashion apparel company.
+An integrated Sales and Operations Planning (S&OP) and Procurement Optimization Control Tower built for apparel manufacturing supply chains.
 
-## Problem Statement
+---
 
-TrendWear operates with 25 fabric suppliers, 5 manufacturing plants, 5 distribution centres and 100 stores. The company faces two connected challenges:
+## 1. Project Overview
 
-**PR1 - Procurement**: Allocating fabric procurement across suppliers to minimize cost while balancing risk, capacity and quality constraints. Predicting delivery delays before releasing purchase orders.
+The TrendWear platform addresses two core operational problems faced by multi-region fashion and apparel enterprises:
 
-**P2 - S&OP Planning**: Synchronizing demand forecasts with plant capacity, fabric lead times and logistics. Reacting to sell-through signals with timely markdowns.
+1. **Problem Statement 1: Integrated S&OP (P2)**
+   - Reconciles multi-region demand projections with plant manufacturing capacity and raw material lead times.
+   - Executes Material Requirements Planning (MRP) explosions across Bill of Materials (BOM) structures.
+   - Evaluates inventory sell-through velocity to recommend markdown schedules and prevent inventory obsolescence.
 
-## Solution
+2. **Problem Statement 2: Procurement Optimization & Risk Prediction (PR1)**
+   - Formulates Mixed-Integer Linear Programming (MILP) models using PuLP to allocate fabric demand across candidate suppliers.
+   - Minimizes total landed costs while enforcing Minimum Order Quantities (MOQs), supplier capacity bounds, and contract risk penalties.
+   - Deploys supervised Machine Learning algorithms (XGBoost Regressor and Random Forest Classifier) to predict purchase order delivery delays and classify supplier risk profiles before order emission.
 
-This project combines both problems into a single Streamlit application with 6 modules:
+---
 
-| Module | Problem | What It Does |
-|--------|---------|------------|
-| Executive Dashboard | Both | KPIs, risk distribution, capacity utilization |
-| Demand & Supply Planning | P2 | Demand aggregation, MRP, capacity check, financial rollup |
-| Procurement Optimizer | PR1 | LP/MIP model (PuLP) for supplier allocation |
-| Risk Prediction | PR1 | XGBoost delay regression + Random Forest risk classification |
-| Markdown Recommender | P2 | Sell-through analysis, SKU classification, markdown timing |
-| Scenario Analysis | Both | What-if: supplier disruption, demand spike, lead time change |
+## 2. System Architecture
 
-## Tech Stack
+```
+                                +----------------------------------+
+                                |  Streamlit Enterprise UI Router  |
+                                |       Role-Based Access Control  |
+                                +----------------+-----------------+
+                                                 |
+                       +-------------------------+-------------------------+
+                       |                                                   |
+        +--------------v--------------+                     +--------------v--------------+
+        |   S&OP Planning Engine      |                     |   Procurement Optimizer     |
+        |   (core/sop_engine.py)      |                     |   (core/optimizer.py)       |
+        +--------------+--------------+                     +--------------+--------------+
+                       |                                                   |
+                       | Gross Material                                    | Optimal Sourcing
+                       | Requirements                                     | Allocation
+                       |                                                   |
+        +--------------v--------------+                     +--------------v--------------+
+        |   Markdown Recommender      |                     |   ML Delay & Risk Pipeline  |
+        | (core/markdown_engine.py)   |                     |   (core/risk_model.py)      |
+        +-----------------------------+                     +-----------------------------+
+                                                 |
+                                +----------------v-----------------+
+                                |   What-If Scenario Simulation    |
+                                |    (core/scenario_engine.py)     |
+                                +----------------------------------+
+```
 
-- **Python 3.10+** with Streamlit for the UI
-- **PuLP** (CBC solver) for linear/mixed-integer programming
-- **XGBoost** for delay prediction, **scikit-learn** for risk classification
-- **Plotly** for interactive charts
-- **pandas/numpy** for data processing
+---
 
-## Setup
+## 3. Core Mathematical Formulations and Logic
+
+### 3.1 Material Requirements Planning (MRP) Explosion
+Given a set of SKUs $k \in K$, fabrics $f \in F$, and planning period $t$:
+
+$$R_{f,t} = \sum_{k \in K} \left( D_{k,t} \times \text{BOM}_{k,f} \right)$$
+
+Where $D_{k,t}$ represents total forecasted demand units for SKU $k$ in period $t$, and $\text{BOM}_{k,f}$ is the fabric meters required per SKU unit.
+
+### 3.2 Mixed-Integer Linear Programming Procurement Model (PuLP)
+Minimize total landed cost, weighted risk penalties, lead time penalties, and unfulfilled demand penalties:
+
+$$\min \sum_{s \in S} \sum_{f \in F} \left( w_{\text{cost}} \cdot P_{s,f} \cdot x_{s,f} + w_{\text{risk}} \cdot \text{Risk}_s \cdot P_{s,f} \cdot x_{s,f} + w_{\text{lt}} \cdot \text{LT}_{s,f} \cdot P_{s,f} \cdot x_{s,f} \right) + \sum_{f \in F} (M \cdot z_f)$$
+
+**Subject to:**
+1. **Demand Satisfaction:** $\sum_{s \in S_f} x_{s,f} + z_f = R_{f,t} \quad \forall f \in F$
+2. **Capacity Bounds:** $x_{s,f} \le \text{Capacity}_{s,f} \cdot y_{s,f} \quad \forall s, f$
+3. **Minimum Order Quantities:** $x_{s,f} \ge \text{MOQ}_{s,f} \cdot y_{s,f} \quad \forall s, f$
+4. **Contract Minimum Allocation:** $x_{s,f} \ge \text{MinAlloc}_{s,f} \cdot R_{f,t} \cdot y_{s,f} \quad \forall s, f$
+5. **Contract Maximum Allocation:** $x_{s,f} \le \text{MaxAlloc}_{s,f} \cdot R_{f,t} \quad \forall s, f$
+
+Where $x_{s,f} \ge 0$ is the continuous volume allocation variable, $y_{s,f} \in \{0, 1\}$ is the binary contract activation variable, and $z_f \ge 0$ is the shortfall variable penalized by Big-M coefficient $M = 10,000$.
+
+### 3.3 Supervised Machine Learning Pipelines
+- **Delay Regressor (XGBoost):** Predicts continuous delivery delay in days using order quantity, lead time, historical supplier OTD %, quality pass rate, defect PPM, and risk interaction terms.
+- **Risk Classifier (Random Forest):** Classifies purchase orders into Low, Medium, or High risk categories.
+
+---
+
+## 4. Synthetic Datasets
+
+The repository includes 16 synthetic CSV datasets comprising 23,935 rows organized under `hackathon_dataset/`:
+
+```
+hackathon_dataset/
+|-- shared/                      # Master Data Tables
+|   |-- supplier_master.csv      # 25 Suppliers (ID, Name, Tier, Location, Base Risk)
+|   |-- fabric_master.csv        # 30 Fabrics (ID, Name, Type, Standard Cost, Lead Time)
+|   |-- sku_master.csv           # 50 SKUs (ID, Style, Category, Season, Target Price)
+|   |-- plant_master.csv         # 5 Plants (ID, Name, Region, Max Monthly Units)
+|   +-- bom_material.csv         # 201 BOM Mappings (SKU to Fabric Consumption)
+|-- pr1_procurement/             # Problem Statement 1 Data
+|   |-- supplier_material_contracts.csv # 254 Contracts (Price, Capacity, MOQ, Min/Max Alloc)
+|   |-- material_demand_forecast.csv    # 2,000 Period Material Demands
+|   |-- supplier_performance_history.csv# 2,000 Historical Performance Records
+|   +-- historical_purchase_orders.csv  # 8,000 PO Records for ML Training
++-- p2_sop/                      # Problem Statement 2 Data
+    |-- seasonal_sku_demand.csv  # 4,000 SKU Demand Forecasts (24 Periods x 4 Regions)
+    |-- current_inventory.csv     # 500 SKU Inventory Balances (5 Location DCs)
+    |-- fabric_constraints.csv   # 150 Plant Fabric Allocation Constraints
+    |-- plant_production_capacity.csv # 120 Plant Monthly Capacity Records
+    |-- historical_sell_through.csv  # 2,600 Weekly Sell-Through Records (52 Weeks)
+    |-- historical_markdowns.csv # 2,000 Historical Discount Records
+    +-- dc_to_store_logistics.csv# 2,000 DC-to-Store Logistics Routes
+```
+
+---
+
+## 5. Software Requirements and Installation
+
+### Prerequisites
+- Python 3.10 or higher
+- C++ Compiler / Coin-OR Solver binaries (included via PuLP `PULP_CBC_CMD`)
+
+### Dependencies
+Install required Python packages:
 
 ```bash
 pip install -r requirements.txt
-python generate_data.py
+```
+
+Core packages used: `streamlit`, `pandas`, `numpy`, `pulp`, `xgboost`, `scikit-learn`, `plotly`.
+
+### Execution
+Run the Streamlit application router:
+
+```bash
 streamlit run app.py
 ```
 
-## Data
+### Demonstration Credentials
+The application implements Role-Based Access Control (RBAC). Use the following credentials to authenticate:
 
-The project uses 16 synthetic CSV datasets (~24,000 rows) generated by `generate_data.py`, organized into 3 folders by problem scope:
+| User ID | Password | Assigned Role | Scope of Module Access |
+| :--- | :--- | :--- | :--- |
+| `admin` | `password` | System Administrator | Full System Access (All Modules) |
+| `planner` | `password` | S&OP Planner | Demand & Supply Planning, Markdown Recommender |
+| `procurement` | `password` | Procurement Manager | Procurement Optimizer, Supplier Risk Prediction |
+| `exec` | `password` | Executive Leader | Executive Summary, What-If Scenario Analysis |
 
-**`shared/`** - Master tables used by both problems: suppliers (25), fabrics (30), SKUs (50), plants (5), BOM (~200)
+---
 
-**`pr1_procurement/`** - PR1 data: supplier contracts (~250), material demand forecast (2000), supplier performance (2000), purchase orders (8000)
-
-**`p2_sop/`** - P2 data: demand forecast (4000), inventory (500), fabric constraints (~150), plant capacity (~120), sell-through (2600), markdowns (2000), logistics (2000)
-
-## Optimization Model
-
-The procurement optimizer uses a Mixed Integer Program:
-
-**Decision Variables**: x[supplier, fabric] = meters to procure, y[supplier, fabric] = binary MOQ indicator
-
-**Objective**: Minimize (cost_weight * procurement_cost + risk_weight * risk_penalty + lead_time_weight * lead_time_penalty + shortfall_penalty)
-
-**Constraints**:
-1. Demand satisfaction (soft, with shortfall penalty)
-2. Supplier capacity limits
-3. Minimum Order Quantity (binary indicator)
-4. Per-contract capacity limits
-
-## ML Models
-
-Trained on 8000 historical purchase orders with 15 features including supplier risk factor, order quantity, lead time, quality scores, and interaction terms.
-
-**Delay Regression** (XGBoost): Predicts delivery delay in days. Features include risk*quantity and risk*lead_time interactions that mirror the underlying delay generation process.
-
-**Risk Classification** (Random Forest): Classifies POs into Low/Medium/High risk categories.
-
-## Project Structure
+## 6. Directory Structure
 
 ```
 trendwear/
-    app.py                     # Main entry point
-    generate_data.py           # Data generator (16 CSVs)
-    requirements.txt           # Dependencies
-    core/
-        data_loader.py         # Cached data loading
-        optimizer.py           # PuLP procurement optimizer
-        risk_model.py          # XGBoost + Random Forest
-        sop_engine.py          # S&OP reconciliation
-        markdown_engine.py     # Sell-through analysis
-        scenario_engine.py     # What-if simulations
-    pages/
-        1_Executive_Dashboard.py
-        2_Demand_Supply_Planning.py
-        3_Procurement_Optimizer.py
-        4_Risk_Prediction.py
-        5_Markdown_Recommender.py
-        6_Scenario_Analysis.py
-    utils/
-        constants.py           # Shared constants
-    hackathon_dataset/
-        shared/                # Master tables (both problems)
-        pr1_procurement/       # Procurement & risk data
-        p2_sop/                # S&OP planning data
+|-- app.py                       # Main Streamlit Application Router & Auth System
+|-- generate_data.py             # Synthetic Data Generation Script
+|-- requirements.txt             # Environment Dependencies
+|-- core/                        # Business Logic & Analytical Engines
+|   |-- data_loader.py           # Dataset Ingestion & Caching
+|   |-- sop_engine.py            # S&OP MRP & Financial Rollup Engine
+|   |-- optimizer.py             # PuLP MILP Procurement Optimization Solver
+|   |-- risk_model.py            # XGBoost Regressor & Random Forest Classifier
+|   |-- markdown_engine.py       # Sell-Through Analysis & Markdown Engine
+|   +-- scenario_engine.py       # What-If Simulation Engine
+|-- views/                       # Streamlit UI View Modules
+|   |-- 0_Home.py                # Platform Overview Page
+|   |-- 1_Executive_Dashboard.py # Executive KPI Summary Page
+|   |-- 2_Demand_Supply_Planning.py # S&OP Planning Workspace
+|   |-- 3_Procurement_Optimizer.py # MILP Optimization Workspace
+|   |-- 4_Risk_Prediction.py     # ML Delay & Risk Workspace
+|   |-- 5_Markdown_Recommender.py# Markdown Recommendation Workspace
+|   +-- 6_Scenario_Analysis.py   # Simulation Workspace
+|-- utils/                       # Utility Helpers & Constants
+|   |-- constants.py             # System Domain Constants
+|   +-- formatters.py            # Currency & Number Formatting Helpers
++-- hackathon_dataset/           # Partitioned Synthetic CSV Datasets
+    |-- shared/
+    |-- pr1_procurement/
+    +-- p2_sop/
 ```
-
-
-## Architecture
-
-```mermaid
-graph TB
-    subgraph Data Layer
-        GEN["generate_data.py<br/>16 CSV datasets"]
-        CSV["hackathon_dataset/<br/>~24000 rows"]
-        GEN --> CSV
-    end
-
-    subgraph Core Engine Layer
-        DL["data_loader.py<br/>Cached data access"]
-        OPT["optimizer.py<br/>PuLP LP/MIP solver"]
-        RISK["risk_model.py<br/>XGBoost + Random Forest"]
-        SOP["sop_engine.py<br/>S&OP reconciliation"]
-        MD["markdown_engine.py<br/>Sell-through analysis"]
-        SCEN["scenario_engine.py<br/>What-if simulations"]
-    end
-
-    subgraph Presentation Layer
-        APP["app.py<br/>Main entry"]
-        P1["Executive Dashboard"]
-        P2["Demand & Supply Planning"]
-        P3["Procurement Optimizer"]
-        P4["Risk Prediction"]
-        P5["Markdown Recommender"]
-        P6["Scenario Analysis"]
-    end
-
-    CSV --> DL
-    DL --> OPT
-    DL --> RISK
-    DL --> SOP
-    DL --> MD
-    DL --> SCEN
-
-    OPT --> P3
-    OPT --> P6
-    RISK --> P4
-    SOP --> P2
-    SOP --> P6
-    MD --> P5
-    SCEN --> P6
-    DL --> P1
-    DL --> APP
-```
-
-## Entity Relationship Diagram
-
-```mermaid
-erDiagram
-    SUPPLIER_MASTER {
-        string supplier_id PK
-        string supplier_name
-        string location
-        string tier_rating
-        float base_risk_factor
-    }
-
-    FABRIC_MASTER {
-        string fabric_id PK
-        string fabric_name
-        string unit_of_measure
-        int standard_lead_time_days
-        float standard_cost_per_meter
-    }
-
-    SKU_MASTER {
-        string sku_id PK
-        string style_name
-        string category
-        string season
-        float target_unit_price
-        date launch_date
-    }
-
-    PLANT_MASTER {
-        string plant_id PK
-        string plant_name
-        string city
-        int weekly_capacity_units
-    }
-
-    BOM_MATERIAL {
-        string bom_id PK
-        string sku_id FK
-        string fabric_id FK
-        float fabric_per_unit_meters
-    }
-
-    SUPPLIER_CONTRACTS {
-        string contract_id PK
-        string supplier_id FK
-        string fabric_id FK
-        float unit_price
-        int monthly_capacity_meters
-        int contracted_lead_time_days
-        int moq_meters
-    }
-
-    PURCHASE_ORDERS {
-        string po_id PK
-        string supplier_id FK
-        string fabric_id FK
-        int order_quantity_meters
-        int delayed_days
-        int is_on_time
-        string risk_category
-    }
-
-    DEMAND_FORECAST {
-        string forecast_id PK
-        string sku_id FK
-        string region
-        string period
-        int forecasted_demand_units
-    }
-
-    INVENTORY {
-        string inventory_id PK
-        string sku_id FK
-        string location_id
-        int available_stock_units
-        int safety_stock_threshold
-    }
-
-    SELL_THROUGH {
-        string sell_through_id PK
-        string sku_id FK
-        string selling_week
-        int units_sold
-        float sell_through_rate
-    }
-
-    SUPPLIER_MASTER ||--o{ SUPPLIER_CONTRACTS : "supplies via"
-    FABRIC_MASTER ||--o{ SUPPLIER_CONTRACTS : "sourced through"
-    SUPPLIER_MASTER ||--o{ PURCHASE_ORDERS : "receives"
-    FABRIC_MASTER ||--o{ PURCHASE_ORDERS : "ordered as"
-    SKU_MASTER ||--o{ BOM_MATERIAL : "requires"
-    FABRIC_MASTER ||--o{ BOM_MATERIAL : "used in"
-    SKU_MASTER ||--o{ DEMAND_FORECAST : "forecasted"
-    SKU_MASTER ||--o{ INVENTORY : "stocked"
-    SKU_MASTER ||--o{ SELL_THROUGH : "sold"
-    PLANT_MASTER ||--o{ PLANT_CAPACITY : "has"
-    SUPPLIER_MASTER ||--o{ SUPPLIER_PERF : "evaluated"
-```
-
-## Pages Walkthrough
-
-### Main Page
-![Main App Page](assets/images/main_page_1786535586769.png)
-
-### Executive Dashboard
-Shows KPIs: Total PO Value ($929.87M), Avg Delay (3.3 days), OTD Rate (18.9%), risk distribution pie chart, supplier performance scatter, demand by category, and plant utilization.
-
-![Executive Dashboard](assets/images/executive_dashboard_1786535601678.png)
-
-### Demand & Supply Planning
-S&OP reconciliation with demand aggregation (32.25M units), material requirements plan, capacity feasibility check, and financial waterfall.
-
-![Demand & Supply Planning](assets/images/demand_supply_planning_1786535616063.png)
-
-### Markdown Recommender
-SKU classification: 13 Fast Movers, 24 Normal, 13 Slow Movers. Shows markdown recommendations with discount tiers and stock-out alerts.
-
-![Markdown Recommender](assets/images/markdown_recommender_1786535631148.png)
-
-### Risk Prediction
-ML model metrics: XGBoost MAE 2.42 days, R² 0.039; Random Forest Accuracy 69.7%, F1 0.299. Feature importance charts and interactive PO prediction form.
-
-![Risk Prediction](assets/images/risk_prediction_1786535657177.png)
-
-> [!NOTE]
-> The low R² (0.039) on the delay regression is expected. The synthetic data uses a negative binomial distribution with high variance, which creates realistic noise that no model can fully explain. In a real-world scenario with actual PO data, R² would be higher. The classification model (Accuracy 69.7%) is more meaningful since it bins the noisy target into 3 categories.
-
-## Full App Recording
-
-![Full walkthrough of all pages](assets/images/full_app_walkthrough_1786535563837.webp)
-
-## Verification Results
-
-| Check | Result |
-|-------|--------|
-| Data generation (16 CSVs) | Passed. 24K rows across 16 files. |
-| Main page loads | Passed. Title and data summary visible. |
-| Executive Dashboard | Passed. 5 KPIs, 4 charts rendered. |
-| Demand & Supply Planning | Passed. S&OP cycle runs, all 5 sections display. |
-| Procurement Optimizer | Passed. Solver finds Optimal solution. $13.2M cost, 19 suppliers, 97.1% fulfillment. |
-| Risk Prediction | Passed. Delay MAE 2.42 days, Risk Accuracy 69.7%. Prediction form works. |
-| Markdown Recommender | Passed. 13 Fast / 24 Normal / 13 Slow. Recommendations generated. |
-| Scenario Analysis | Passed. Supplier disruption shows cost/risk delta. |
